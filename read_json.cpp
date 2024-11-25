@@ -1,17 +1,16 @@
 #include "libs/read_json.h"
 
-void readJson(Array* massTabl, string& baseName){
-
+void readJson(string& baseName){
     ifstream jsonFile("files/schema.json");
     json configs;
     jsonFile >> configs;
 
-    string schemaName = configs["name"];
+    baseName = configs["name"];
 
-    fs::create_directory(schemaName);
+    fs::create_directory(baseName);
 
     for (const auto& [tableName, columns] : configs["structure"].items()) {
-        string tablePath = schemaName + "/" + tableName;
+        string tablePath = baseName + "/" + tableName;
         fs::create_directory(tablePath);
 
         if (!fs::exists(tablePath + "/" + tableName + "_pk")){
@@ -32,14 +31,4 @@ void readJson(Array* massTabl, string& baseName){
         }
 
     }
-}
-
-string remQuotes(string column){
-    string result;
-    for (char symbol : column){
-        if (symbol != '"'){
-            result += symbol;
-        }
-    }
-    return result;
 }

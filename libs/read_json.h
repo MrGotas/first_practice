@@ -4,15 +4,13 @@
 #include <iostream>
 #include <fstream>
 #include <filesystem>
-#include "array.h"
 #include <nlohmann/json.hpp>
+#include "instruments.h"
 
 using namespace std;
 namespace fs = filesystem;
 using json = nlohmann::json;
 
-void readJson(Array* massTabl, string& baseName);
-void createСsv(const string& csvPath, const json& columns);
-string remQuotes(string column);
+void readJson(string& baseName);
 
 #endif // READ_JSON
