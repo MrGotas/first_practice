@@ -9,6 +9,7 @@ using namespace std;
 namespace fs = filesystem;
 
 void insertCom(string userCommand, string baseName);
+void delCom(string userCommand, string baseName);
 
 int main() {
     /*
@@ -34,7 +35,7 @@ int main() {
         }else if (temp == "INSERT"){
             insertCom(userCommand, baseName);
         }else if (temp == "DELETE"){
-
+            delCom(userCommand, baseName);
         }else if (temp == "SELECT"){
 
         }else{
@@ -139,6 +140,87 @@ void insertCom(string userCommand, string baseName){
 
     ofstream filePkEnd(pkFile);
     filePkEnd << pkVal + 1;
+
+    unlockTable(tablePath, tableName);
+}
+
+void delCom(string userCommand, string baseName){
+    if (countWords(userCommand) < 7){
+        cerr << "ERROR_12: Unknown command." << countWords(userCommand) << endl;
+        return;
+    }
+
+    stringstream ss (userCommand);
+    string tableName, temp;
+    ss >> temp; // DELETE
+
+    ss >> temp;
+    if (temp != "FROM"){
+        cerr << "ERROR_13: Unknown command." << endl;
+        return;
+    }
+
+    ss >> tableName;
+    string tablePath = baseName + "/" + tableName;
+
+    if (isLock(tablePath, tableName)){
+        cout << "The table is currently locked for use, try again later." << endl;
+        return;
+    }else{
+        lockTable(tablePath, tableName);
+    }
+
+    int countCol = 0;
+    if (!checkTable(tablePath, countCol)){
+        cerr << "ERROR_14: Unknown table name." << endl;
+        unlockTable(tablePath, tableName);
+        return;
+    }
+
+    ss >> temp;
+    if (temp != "WHERE"){
+        cerr << "ERROR_15: Unknown command." << endl;
+        unlockTable(tablePath, tableName);
+        return;
+    }
+
+    string operations;
+    while (getline(ss, operations));
+
+    StrArray tokens; // массив токенов
+    if (!toTokens(operations, tokens, baseName, tableName)){
+        unlockTable(tablePath, tableName);
+        return;
+    }
+
+    /*for (int i = 0; i < tokens.sizeM(); i++){
+        string res;
+        tokens.get(i, res);
+        cout << res << endl;
+    }*/
+
+
+    ifstream csv (tablePath + "/1.csv");
+    ofstream tempFile(tablePath + "/temp.txt");
+    string line;
+    getline(csv, line);
+    tempFile << line;
+
+    int lines;
+    while (getline(csv, line)){
+        lines ++;
+
+        if (isDel(tokens, line)){
+            continue;
+        }else{
+            tempFile << endl << line;
+        }
+    }
+
+
+
+
+
 
     unlockTable(tablePath, tableName);
 }

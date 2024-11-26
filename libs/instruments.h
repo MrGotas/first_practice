@@ -20,5 +20,9 @@ void unlockTable (string tablePath, string tableName);
 bool checkValues (StrArray& valuesToCol);
 bool fileAvail (string nextCsv, string tablePath);
 void checkCsv (string tablePath, string tableName, string& csv);
+bool toTokens (string operations, StrArray& tokens, string basename, string tableName);
+bool correctToken (string& temptoken,string  basename, string tableName);
+bool findValue (string value, int numCol, string line);
+bool isDel(StrArray& tokens, string line);
 
 #endif // INSTRUMENTS

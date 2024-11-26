@@ -216,5 +216,159 @@ void checkCsv (string tablePath, string tableName, string& csv){
     }
 }
 
+bool correctToken (string& tempToken, string basename, string tableName){
+    string table = "", column = "", val = "", temp;
+    int countAp = 0;
+    for (size_t i = 0; i < tempToken.size(); i++){
+        if (tempToken[i] == '.'){
+            table = temp;
+            temp = "";
+            continue;
+        }
+        if (tempToken[i] == '='){
+            column = temp;
+            temp = "";
+            continue;
+        }
+        if (tempToken[i] == '\''){
+            if (countAp == 0){
+                countAp ++;
+            }else if(countAp == 1){ 
+                val = temp;
+                temp = "";
+            }else{
+                cerr << "ERROR_29: Many apostrophes." << endl;
+                return false;
+            }
+            continue;
+        }
+        temp += tempToken[i];
+    }
+
+    if (table == "" || column == "" || val == "" || temp != ""){
+        cerr << "ERROR_21: Not enought arguments for WHERE." << endl;
+        return false;
+    }
+
+    if (table != tableName){
+        cerr << "ERROR_22: Unknown table name." << endl;
+        return false;
+    }
+
+    ifstream csv(basename + "/" + tableName + "/1.csv");
+    string line;
+    getline(csv, line);
+
+    stringstream ss(line);
+    string item;
+    int numberCol = 0;
+    bool found = false;
+    while (getline(ss, item, ';')){
+        numberCol ++;
+        if (item == column){
+            found = true;
+            break;
+        }
+    }
+    if (found == false){
+        cerr << "ERROR_24: Uncnown column." << endl;
+        return false;
+    }else{
+        column = to_string(numberCol);
+        tempToken = column + " " + val;
+        return true;
+    }
+}
+
+bool toTokens (string operations, StrArray& tokens, string basename, string tableName){
+    stringstream ss(operations);
+    string temp, temptoken;
+    int tokenWords = 0, countTokens = 0, countOper = 0;
+    int similarTok = 0, similarOp = 0;
+    while (ss >> temp){
+        if (temp == "OR" || temp == "AND"){
+            if (similarOp == 1 || tokenWords != 0){
+                cerr << "ERROR_16: Many 'OR' of 'AND'." << endl;
+                return false;
+            }
+            tokens.push(temp);
+            similarTok = 0;
+            countOper++;
+            similarOp++;
+            continue;
+        }
+
+        temptoken += temp;
+        tokenWords++;
+        if (tokenWords == 3){
+            if (similarTok == 1){
+                cerr << "ERROR_19: Unknown command" << endl;
+                return false;
+            }
+            if (!correctToken (temptoken, basename, tableName)){
+                return false;
+            }
+            tokens.push(temptoken);
+            similarOp = 0;
+            similarTok++;
+            countTokens++;
+            temptoken = "";
+            tokenWords = 0;
+        }
+    }
+
+    if (tokenWords != 0){
+        cerr << "ERROR_17: Unknown command." << endl;
+        return false;
+    }
+    if (countTokens - 1 != countOper){
+        cerr << "ERROR_18: Unknown command." << endl;
+        return false;
+    }
+
+    return true;
+}
+
+bool findValue (string value, int numCol, string line){
+    stringstream elems(line);
+    string elem;
+    bool isFind = false;
+    int pos = 0;
+    while (getline(elems, elem, ';')){
+        pos++;
+        if (pos == numCol && elem == value){
+            isFind = true;
+            break;
+        }
+    }
+    return isFind;
+}
+
+bool isDel(StrArray& tokens, string line){
+    int countOR = 0;
+    bool res = false;
+    for (size_t i = 0; i < tokens.sizeM(); i++){
+        string token, value;
+        int numCol;
+        tokens.get(i, token);
+        if (token == "OR"){
+            if (res = true){
+                return true;
+            }else{
+                countOR++;
+                continue;
+            }
+        }
+        stringstream elems(token);
+        elems >> numCol;
+        elems >> value;
+
+        if (findValue(value, numCol, line)){
+            res = true;
+        }
+    }
+
+    return res;
+}
 
 
