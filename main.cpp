@@ -1,15 +1,15 @@
 #include <iostream>
 #include <string>
 #include <sstream>
-#include "libs/instruments.h"
 #include "libs/read_json.h"
+#include "libs/instruments.h"
 #include "libs/array.h"
 
 using namespace std;
 namespace fs = filesystem;
 
 void insertCom(string userCommand, string baseName);
-void delCom(string userCommand, string baseName);
+//void delCom(string userCommand, string baseName);
 
 int main() {
     /*
@@ -35,7 +35,7 @@ int main() {
         }else if (temp == "INSERT"){
             insertCom(userCommand, baseName);
         }else if (temp == "DELETE"){
-            delCom(userCommand, baseName);
+            //delCom(userCommand, baseName);
         }else if (temp == "SELECT"){
 
         }else{
@@ -47,74 +47,47 @@ int main() {
 }
 
 void insertCom(string userCommand, string baseName){
-    if (countWords(userCommand) < 5){
-        cerr << "ERROR_2: Unknown command." << countWords(userCommand) << endl;
+    string tableName, values;
+    if (!checkSyntax(tableName, values, baseName, userCommand, "INS")){
         return;
     }
 
-    stringstream ss (userCommand);
-    string tableName, temp;
-    ss >> temp; // INSERT
-    
-    ss >> temp;
-    if (temp != "INTO"){
-        cerr << "ERROR_3: Unknown command." << endl;
-        return;
-    }
-
-    ss >> tableName;
     string tablePath = baseName + "/" + tableName;
+    if (!checkTable(tablePath)){
+        cerr << "ERROR_5: Unknown table name." << endl;
+        return;
+    }
 
-    if (isLock(tablePath, tableName)){
+    stringstream ss (values);
+    string temp;
+    StrArray valuesToCol;
+    while (ss >> temp){
+        valuesToCol.push(temp);
+    }
+
+    int countCols = countCol(tableName); // кол-во столбцов в таблице
+
+    if (countCols != valuesToCol.sizeM()){
+        cerr << "ERROR_6: Incorrect count of values." << endl;
+        return;
+    }
+
+    if (checkValues(valuesToCol) == false){ //проверка синтаксиса вводимых значений
+        cerr << "ERROR_7: Incorrect syntax values." << endl;
+        return;
+    }
+
+    if (isLock(tablePath, tableName)){ //Проверка блокировки таблицы
         cout << "The table is currently locked for use, try again later." << endl;
         return;
     }else{
-        lockTable(tablePath, tableName);
-    }
-
-    int countCol = 0;
-    if (!checkTable(tablePath, countCol)){
-        cerr << "ERROR_4: Unknown table name." << endl;
-        unlockTable(tablePath, tableName);
-        return;
-    }
-
-    ss >> temp;
-    if (temp != "VALUES"){
-        cerr << "ERROR_5: Unknown command." << endl;
-        unlockTable(tablePath, tableName);
-        return;
-    }
-
-    StrArray valuestoCol;
-    while (ss >> temp){
-        countCol--;
-        valuestoCol.push(temp);
-    }
-    
-    if (countCol != 0){
-        if (countCol < 0){
-            cerr << "ERROR_8: Many argumenst to insert." << endl;
-            unlockTable(tablePath, tableName);
-            return;
-        }else{
-            cerr << "ERROR_9: Few argumenst to insert." << endl;
-            unlockTable(tablePath, tableName);
-            return;
-        }
-        unlockTable(tablePath, tableName);
-        return;
-    }
-    if (checkValues(valuestoCol) == false){
-        cerr << "ERROR_10: Incorrect values." << endl;
-        unlockTable(tablePath, tableName);
-        return;
+        lockTable(tablePath, tableName); // блокируем на время работы
     }
 
     string pkFile = tablePath + "/" + tableName + "_pk";
     ifstream filePk(pkFile);
     if (!filePk.is_open()){
-        cerr << "ERROR_11: Unable to open file: " << pkFile << endl;
+        cerr << "ERROR_10: Unable to open file: " << pkFile << endl;
         unlockTable(tablePath, tableName);
         return;
     }
@@ -122,16 +95,15 @@ void insertCom(string userCommand, string baseName){
     filePk >> pkVal;
     filePk.close();
 
-    // сделать проверку на переполнение
-    string dataToTable;
+    string dataToTable; // строка к вставке
     dataToTable = to_string(pkVal) + ";";
-    for (size_t i = 0; i < valuestoCol.sizeM(); i++){
+    for (size_t i = 0; i < valuesToCol.sizeM(); i++){
         string elem;
-        valuestoCol.get(i, elem);
+        valuesToCol.get(i, elem);
         dataToTable += elem + ";";
     }
 
-    string csv;
+    string csv; // выбор csv файла в который будем записывать строку
     checkCsv (tablePath, tableName, csv);
 
     ofstream fileCsv(tablePath + "/" + csv, ios::app);
@@ -145,6 +117,13 @@ void insertCom(string userCommand, string baseName){
 }
 
 void delCom(string userCommand, string baseName){
+
+
+
+
+
+
+    /*
     if (countWords(userCommand) < 7){
         cerr << "ERROR_12: Unknown command." << countWords(userCommand) << endl;
         return;
@@ -193,11 +172,11 @@ void delCom(string userCommand, string baseName){
         return;
     }
 
-    /*for (int i = 0; i < tokens.sizeM(); i++){
+    for (int i = 0; i < tokens.sizeM(); i++){
         string res;
         tokens.get(i, res);
         cout << res << endl;
-    }*/
+    }
 
 
     ifstream csv (tablePath + "/1.csv");
@@ -217,10 +196,6 @@ void delCom(string userCommand, string baseName){
         }
     }
 
-
-
-
-
-
     unlockTable(tablePath, tableName);
+    */
 }

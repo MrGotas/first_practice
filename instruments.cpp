@@ -13,7 +13,7 @@ string remQuotes(string column){
 int countWords (string words){
     stringstream ss (words);
     string word;
-    int countWords;
+    int countWords = 0;
 
     while (ss >> word){
         countWords++;
@@ -22,61 +22,53 @@ int countWords (string words){
     return countWords;
 }
 
-bool checkTable (string tablePath, int& countCol){
+bool checkSyntax(string& tableName, string& values, string baseName, string userCommand, string command){
+    int countWor = countWords(userCommand); // проверка кол-ва слов
+    if (command == "INS" && countWor < 5 || command == "DEL" && countWor < 7){
+        cerr << "ERROR_2: Unknown command." << endl;
+        return false;
+    }
+
+    stringstream ss (userCommand);
+    string temp;
+    ss >> temp; // первое слово
+
+    ss >> temp;
+    if (command == "INS" && temp != "INTO" || command == "DEL" && temp != "FROM"){
+        cerr << "ERROR_3: Unknown command." << endl;
+        return false;
+    }
+
+    ss >> tableName;
+
+    ss >> temp;
+    if (command == "INS" && temp != "VALUES" || command == "DEL" && temp != "WHERE"){
+        cerr << "ERROR_4: Unknown command." << endl;
+        return false;
+    }
+
+    while (ss >> temp){
+        values += temp + " ";
+    }
+
+    return true;
+}
+
+bool checkTable(string tablePath){
     if (fs::exists(tablePath) && fs::is_directory(tablePath)){
-
-        string pathCSV = tablePath + "/1.csv";
-        ifstream file(pathCSV);
-
-        string columns;
-        getline(file, columns);
-        stringstream ss(columns);
-        string column;
-
-        while (getline (ss, column, ';')){
-            countCol++;
-        }
-        countCol--;
         return true;
     }else{
         return false;
     }
 }
 
-bool isLock(string tablePath, string tableName){
-    string path = tablePath + "/" + tableName + "_lock";
-    ifstream file (path);
-    if (!file.is_open()){
-        cerr << "ERROR_6: Unable to open file: " << path << endl;
-        return false;
-    }
-
-    int value;
-    file >> value;
+int countCol(string tableName){
+    ifstream file("files/schema.json");
+    json jsonData;
+    file >> jsonData;
     file.close();
 
-    if (value == 1){
-        return true;
-    }else if (value == 0){
-        return false;
-    }else{
-        cerr << "ERROR_7: Unknown value from file: " << path << endl;
-        return false;
-    }
-}
-
-void lockTable (string tablePath, string tableName){
-    string path = tablePath + "/" + tableName + "_lock";
-    ofstream file (path);
-    file << 1;
-    file.close();
-}
-
-void unlockTable (string tablePath, string tableName){
-    string path = tablePath + "/" + tableName + "_lock";
-    ofstream file (path);
-    file << 0;
-    file.close();
+    return jsonData["structure"][tableName].size();
 }
 
 bool checkValues (StrArray& valuesToCol){
@@ -166,11 +158,47 @@ bool checkValues (StrArray& valuesToCol){
     return true;
 }
 
-bool fileAvail (string nextCsv, string tablePath){ // Проверка существования Csv
+bool isLock(string tablePath, string tableName){
+    string path = tablePath + "/" + tableName + "_lock";
+    ifstream file (path);
+    if (!file.is_open()){
+        cerr << "ERROR_8: Unable to open file: " << path << endl;
+        return false;
+    }
+
+    int value;
+    file >> value;
+    file.close();
+
+    if (value == 1){
+        return true;
+    }else if (value == 0){
+        return false;
+    }else{
+        cerr << "ERROR_9: Unknown value from file: " << path << endl;
+        return false;
+    }
+}
+
+void lockTable (string tablePath, string tableName){
+    string path = tablePath + "/" + tableName + "_lock";
+    ofstream file (path);
+    file << 1;
+    file.close();
+}
+
+void unlockTable (string tablePath, string tableName){
+    string path = tablePath + "/" + tableName + "_lock";
+    ofstream file (path);
+    file << 0;
+    file.close();
+}
+
+bool fileAvail (string nextCsv, string tablePath){ // Проверка существования CSV
     ifstream nextFileCsv(tablePath + "/" + nextCsv);
     if (nextFileCsv.is_open()) {
         return true;
-    }else{
+    }else{ // если не существует - создаём
         ifstream firstCsv (tablePath + "/1.csv");
         string lineFirstCsv;
         getline(firstCsv, lineFirstCsv);
@@ -198,7 +226,6 @@ void checkCsv (string tablePath, string tableName, string& csv){
         while (getline(fileCsv, line)){
             lineCount++;
         }
-
         fileCsv.close();
 
         if (lineCount < turplLim){
@@ -216,6 +243,15 @@ void checkCsv (string tablePath, string tableName, string& csv){
     }
 }
 
+
+
+
+
+
+
+
+
+/*
 bool correctToken (string& tempToken, string basename, string tableName){
     string table = "", column = "", val = "", temp;
     int countAp = 0;
@@ -371,4 +407,4 @@ bool isDel(StrArray& tokens, string line){
     return res;
 }
 
-
+*/
