@@ -47,7 +47,7 @@ struct StrArray {
     string get(size_t index) {
         if (index < 0 || index >= size) {
             cout << "ERROR: Index out of range." << endl;
-            return;
+            return "";
         }
         return data[index];
     }

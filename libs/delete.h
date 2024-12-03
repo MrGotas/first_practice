@@ -9,6 +9,7 @@
 #include "instruments.h"
 
 using namespace std;
+using json = nlohmann::json;
 
 bool correctCond(StrArray& condArr, string tableName);
 void delCom(string userCommand, string baseName);

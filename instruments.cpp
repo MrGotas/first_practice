@@ -87,3 +87,20 @@ void unlockTable (string tablePath, string tableName){
     file << 0;
     file.close();
 }
+
+bool columnExist (string tableName, string columnName){
+    ifstream file("files/schema.json");
+    json jsonData;
+    file >> jsonData;
+    file.close();
+
+    if (jsonData.contains("structure") && jsonData["structure"].contains(tableName)){
+        const auto& columns = jsonData["structure"][tableName];
+        for (const auto& column : columns){
+            if (column == columnName){
+                return true;
+            }
+        }
+    }
+    return false;
+}

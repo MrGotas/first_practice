@@ -17,5 +17,6 @@ bool checkTable(string tablePath);
 bool isLock(string tablePath, string tableName);
 void lockTable (string tablePath, string tableName);
 void unlockTable (string tablePath, string tableName);
+bool columnExist (string tableName, string columnName);
 
 #endif // INSTRUMENTS
