@@ -2,12 +2,9 @@
 #define MASSIVE_H_INCLUDED
 
 #include <iostream>
-#include <filesystem>
-#include <fstream>
 #include <string>
 
 using namespace std;
-namespace fs = filesystem;
 
 struct StrArray {
     string* data;   
@@ -47,12 +44,12 @@ struct StrArray {
         return size; // Возвращаем текущий размер
     }
 
-    void get(size_t index, string& result) {
+    string get(size_t index) {
         if (index < 0 || index >= size) {
             cout << "ERROR: Index out of range." << endl;
             return;
         }
-        result = data[index];
+        return data[index];
     }
 
     void replace(size_t index, const string& value) {

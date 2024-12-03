@@ -32,3 +32,13 @@ void readJson(string& baseName){
 
     }
 }
+
+string remQuotes(string column){
+    string result;
+    for (char symbol : column){
+        if (symbol != '"'){
+            result += symbol;
+        }
+    }
+    return result;
+}
