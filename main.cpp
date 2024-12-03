@@ -2,6 +2,7 @@
 #include <string>
 #include <sstream>
 #include "libs/read_json.h"
+#include "libs/insert.h"
 #include "libs/instruments.h"
 #include "libs/array.h"
 
@@ -9,7 +10,7 @@ using namespace std;
 namespace fs = filesystem;
 
 void insertCom(string userCommand, string baseName);
-//void delCom(string userCommand, string baseName);
+void delCom(string userCommand, string baseName);
 
 int main() {
     /*
@@ -35,7 +36,7 @@ int main() {
         }else if (temp == "INSERT"){
             insertCom(userCommand, baseName);
         }else if (temp == "DELETE"){
-            //delCom(userCommand, baseName);
+            delCom(userCommand, baseName);
         }else if (temp == "SELECT"){
 
         }else{
@@ -46,82 +47,28 @@ int main() {
     return 0;
 }
 
-void insertCom(string userCommand, string baseName){
-    string tableName, values;
-    if (!checkSyntax(tableName, values, baseName, userCommand, "INS")){
+void delCom(string userCommand, string baseName){
+    string tableName, conditions;
+    if (!checkSyntax(tableName, conditions, baseName, userCommand, "DEL")){
         return;
     }
 
     string tablePath = baseName + "/" + tableName;
     if (!checkTable(tablePath)){
-        cerr << "ERROR_5: Unknown table name." << endl;
+        cerr << "ERROR_11: Unknown table name." << endl;
         return;
     }
 
-    stringstream ss (values);
+    stringstream ss (conditions);
     string temp;
-    StrArray valuesToCol;
+    StrArray condArr;
     while (ss >> temp){
-        valuesToCol.push(temp);
+        condArr.push(temp);
     }
 
-    int countCols = countCol(tableName); // кол-во столбцов в таблице
-
-    if (countCols != valuesToCol.sizeM()){
-        cerr << "ERROR_6: Incorrect count of values." << endl;
+    if (!correctCond(condArr)){
         return;
     }
-
-    if (checkValues(valuesToCol) == false){ //проверка синтаксиса вводимых значений
-        cerr << "ERROR_7: Incorrect syntax values." << endl;
-        return;
-    }
-
-    if (isLock(tablePath, tableName)){ //Проверка блокировки таблицы
-        cout << "The table is currently locked for use, try again later." << endl;
-        return;
-    }else{
-        lockTable(tablePath, tableName); // блокируем на время работы
-    }
-
-    string pkFile = tablePath + "/" + tableName + "_pk";
-    ifstream filePk(pkFile);
-    if (!filePk.is_open()){
-        cerr << "ERROR_10: Unable to open file: " << pkFile << endl;
-        unlockTable(tablePath, tableName);
-        return;
-    }
-    int pkVal;
-    filePk >> pkVal;
-    filePk.close();
-
-    string dataToTable; // строка к вставке
-    dataToTable = to_string(pkVal) + ";";
-    for (size_t i = 0; i < valuesToCol.sizeM(); i++){
-        string elem;
-        valuesToCol.get(i, elem);
-        dataToTable += elem + ";";
-    }
-
-    string csv; // выбор csv файла в который будем записывать строку
-    checkCsv (tablePath, tableName, csv);
-
-    ofstream fileCsv(tablePath + "/" + csv, ios::app);
-    fileCsv << endl << dataToTable;
-    fileCsv.close();
-
-    ofstream filePkEnd(pkFile);
-    filePkEnd << pkVal + 1;
-
-    unlockTable(tablePath, tableName);
-}
-
-void delCom(string userCommand, string baseName){
-
-
-
-
-
 
     /*
     if (countWords(userCommand) < 7){

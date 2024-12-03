@@ -1,5 +1,5 @@
-#ifndef INSTRUMENTS
-#define INSTRUMENTS
+#ifndef INSERT
+#define INSERT
 
 #include <iostream>
 #include <fstream>
@@ -24,4 +24,4 @@ bool fileAvail (string nextCsv, string tablePath);
 void checkCsv (string tablePath, string tableName, string& csv);
 bool correctCond (StrArray& condArr);
 
-#endif // INSTRUMENTS
+#endif // INSERT
