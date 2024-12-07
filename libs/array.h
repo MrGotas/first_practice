@@ -70,6 +70,12 @@ struct StrArray {
         }
         --size;
     }
+
+    void print() const {
+        for (size_t i = 0; i < size; ++i) {
+            cout << data[i] << endl;
+        }
+    }
 };
 
 #endif // MASSIVE_H_INCLUDED
