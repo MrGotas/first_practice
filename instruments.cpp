@@ -104,3 +104,20 @@ bool columnExist (string tableName, string columnName){
     }
     return false;
 }
+
+int getTurplLim (){
+    ifstream jsonFile("files/schema.json");
+    json configs;
+    jsonFile >> configs;
+    jsonFile.close();
+
+    return configs["tuples_limit"];
+}
+
+bool csvAvail (string csv){
+    if (fs::exists(csv)){
+        return true;
+    }else{
+        return false;
+    }
+}

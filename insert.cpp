@@ -183,11 +183,7 @@ bool fileAvail (string nextCsv, string tablePath){ // Проверка суще�
 }
 
 void checkCsv (string tablePath, string tableName, string& csv){
-    ifstream jsonFile("files/schema.json");
-    json configs;
-    jsonFile >> configs;
-
-    int turplLim = configs["tuples_limit"];
+    int turplLim = getTurplLim();
     int countCsv = 1;
     while (true){
         ifstream fileCsv(tablePath + "/" + to_string(countCsv) + ".csv");

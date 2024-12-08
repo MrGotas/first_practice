@@ -18,5 +18,7 @@ bool isLock(string tablePath, string tableName);
 void lockTable (string tablePath, string tableName);
 void unlockTable (string tablePath, string tableName);
 bool columnExist (string tableName, string columnName);
+int getTurplLim ();
+bool csvAvail (string csv);
 
 #endif // INSTRUMENTS
