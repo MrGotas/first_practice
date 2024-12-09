@@ -4,6 +4,7 @@
 #include "libs/read_json.h"
 #include "libs/insert.h"
 #include "libs/delete.h"
+#include "libs/select.h"
 
 using namespace std;
 
@@ -11,7 +12,7 @@ int main() {
     /*
     cout << "Напиши чего ты хочешь: ";
     string userWish;
-    cin >> userWish;
+    getline(cin,userWish);
     cout << "Если хочется  " << userWish << " - перехочется." << endl; 
     cout << "Сиди учись, пока ещё студент" << endl;
     */
@@ -28,16 +29,19 @@ int main() {
 
         if (temp == "EXIT"){
             return 0;
+
         }else if (temp == "INSERT"){
             insertCom(userCommand, baseName);
+
         }else if (temp == "DELETE"){
             delCom(userCommand, baseName);
+
         }else if (temp == "SELECT"){
+            selectCom(userCommand, baseName);
 
         }else{
             cerr << "ERROR_1: Unknown command." << endl;
         }
     }
-
     return 0;
 }
