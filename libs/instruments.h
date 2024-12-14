@@ -20,5 +20,7 @@ void unlockTable (string tablePath, string tableName);
 bool columnExist (string tableName, string columnName);
 int getTurplLim ();
 bool csvAvail (string csv);
+void getTablCol (string tablCol, string& table, string& column);
+int colIndex (string table, string column);
 
 #endif // INSTRUMENTS
