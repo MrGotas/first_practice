@@ -121,3 +121,26 @@ bool csvAvail (string csv){
         return false;
     }
 }
+
+void getTablCol (string tablCol, string& table, string& column){
+    stringstream ss(tablCol);
+    getline(ss, table, '.');
+    getline(ss, column);
+}
+
+int colIndex (string table, string column){
+    ifstream jsonFile("files/schema.json");
+    json configs;
+    jsonFile >> configs;
+    jsonFile.close();
+
+    const auto& tableColumns = configs["structure"][table];
+    int columnPos = 1; // чтобы пропустить table_pk
+    for (const auto& tableColumn : tableColumns){ //нахоидм до какого значения строки идти
+        columnPos++;
+        if (tableColumn == column){
+            break;
+        }
+    }
+    return columnPos;
+}

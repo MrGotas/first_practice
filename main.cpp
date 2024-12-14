@@ -29,7 +29,7 @@ int main() {
 
         if (temp == "EXIT"){
             return 0;
-
+            
         }else if (temp == "INSERT"){
             insertCom(userCommand, baseName);
 

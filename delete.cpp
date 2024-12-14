@@ -209,29 +209,6 @@ void replaceTok(StrArray& tokens, string nextToken){
     tokens.replace(tokens.sizeM() - 1, lastTok + " " + nextToken);
 }
 
-void getTablCol (string tablCol, string& table, string& column){
-    stringstream ss(tablCol);
-    getline(ss, table, '.');
-    getline(ss, column);
-}
-
-int colIndex (string table, string column){
-    ifstream jsonFile("files/schema.json");
-    json configs;
-    jsonFile >> configs;
-    jsonFile.close();
-
-    const auto& tableColumns = configs["structure"][table];
-    int columnPos = 1; // чтобы пропустить table_pk
-    for (const auto& tableColumn : tableColumns){ //нахоидм до какого значения строки идти
-        columnPos++;
-        if (tableColumn == column){
-            break;
-        }
-    }
-    return columnPos;
-}
-
 string withoutApostr (string word){
     string result;
     for (size_t i = 1; i < word.size() - 1; i++){
