@@ -51,15 +51,16 @@ void selectCom (string userCommand, string baseName){
         lockTables(fromTable, baseName, "1"); // блокируем на время работы
     }
 
-    createTemp(outputCol, baseName, wasWhere);
+    string colNames;
+    createTemp(outputCol, baseName, wasWhere, colNames);
 
     massWithoutCol(outputCol);
 
-    int countColumns = outputCol.sizeM() - 1, nowTable = 0;
-    string output, colNames, tempStr;
-    crossJoin(outputCol, baseName, countColumns, nowTable, output, colNames, tempStr);
+    int nowTable = 0;
+    string output, tempStr;
+    crossJoin(baseName, outputCol, nowTable, output, tempStr);
     cout << colNames << endl;
-    cout << output << endl;
+    //cout << output;
 
 
 
@@ -113,7 +114,7 @@ string getValueFromLine(string line, int columnNum){
     return value;
 }
 
-void fromCsvToTemp (string baseName, string tableName, string column){ // функция чтения всех csv одной таблицы
+void fromCsvToTemp (string baseName, string tableName, string column, string& colNames){ // функция чтения всех csv одной таблицы
     string tempPath = baseName + "/" + tableName + "/temp.csv";
     int columnNum = colIndex(tableName, column);
     int countCsv = 1;
@@ -129,10 +130,13 @@ void fromCsvToTemp (string baseName, string tableName, string column){ // фун
         if (columnName == " "){ // записываем название столбца отдельно
             getline(csv, line);
             string value = getValueFromLine(line, columnNum);
+            colNames += value + " ";
+
+            getline(csv, line); // записываем первое значение после названия колонки
             ofstream tempFile(tempPath, ios::app);
+            value = getValueFromLine(line, columnNum);
             tempFile << value;
             columnName = value;
-            tempFile.close();
         }else{
             getline(csv, line);
         }
@@ -144,12 +148,13 @@ void fromCsvToTemp (string baseName, string tableName, string column){ // фун
             tempFile << endl << value;
         }
         
+        csv.close();
         tempFile.close();
         countCsv++;
     }
 }
 
-void createTemp(StrArray& outputCol, string baseName, bool wasWhere){
+void createTemp(StrArray& outputCol, string baseName, bool wasWhere, string& colNames){
     if (wasWhere == false){
         for (size_t i = 0; i < outputCol.sizeM(); i++){
             string tableCol = outputCol.get(i);
@@ -157,7 +162,7 @@ void createTemp(StrArray& outputCol, string baseName, bool wasWhere){
             string tableName, column;
             getTablCol(tableCol, tableName, column); // оплучаем отдельно таблицу и колонку
             
-            fromCsvToTemp(baseName, tableName, column);
+            fromCsvToTemp(baseName, tableName, column, colNames);
         }
 
     }else{
@@ -175,37 +180,84 @@ void massWithoutCol (StrArray& outputCol){
     }
 }
 
-void crossJoin(StrArray& outputCol, string baseName, int countColumns, int nowTable, string& output, string& colNames, string& tempStr){
+void clearTemp(string& tempStr){
+    cout << "------------------------------------------------------------------------" << endl;
+    stringstream counter(tempStr);
+    string element;
+    int countWords = 0;
+    while (counter >> element) {
+        countWords++;
+    }
+
+    if (countWords == 1) {
+        tempStr = "";
+        return;
+    }
+
+    stringstream words(tempStr);
+    string word, result;
+    int count = 0;
+    while (words >> word) {
+        if (count == countWords - 1) {
+            break;
+        } else {
+            result += word + " ";
+        }
+        count++;
+    }
+    cout << "Temp = " << tempStr << " result " << result << endl;
+    cout << "---------------------------------------------------------------------------" << endl;
+    tempStr = result;
+}
+
+void crossJoin(string baseName, StrArray& outputCol, int nowTable, string& output, string tempStr){
     string tableName;
     for (size_t i = 0; i < outputCol.sizeM(); i++){
         if (i == nowTable){
             tableName = outputCol.get(i);
+            nowTable++;
             break;
         }
     }
+    cout << "Таблица " << tableName << " номер " << nowTable << " всего " << outputCol.sizeM() << endl;
     
-    //cout << "Сейчас в таблице " << tableName << endl;
-
-    string tempPath =  baseName + "/" + tableName + "/temp.csv";
+    string tempPath = baseName + "/" + tableName + "/temp.csv";
     ifstream tempFile(tempPath);
     string value;
-    getline(tempFile, value);
-    while (getline(tempFile, value)){
 
-        if (nowTable == countColumns){
-            output += tempStr + value + "\n";
-        }else{
+    while (getline(tempFile, value)){
+        if (nowTable != outputCol.sizeM()){ // если рассматривается не последняя таблица
             tempStr += value + " ";
-            //cout << "На данный момент значения " << output << endl;
-            if (nowTable < countColumns){
-                crossJoin(outputCol, baseName, countColumns, nowTable + 1, output, colNames, tempStr);
-            }
+
+            cout << "Сейчас в таблице " << tableName << " " << endl;
+            cout << "tempStr = " << tempStr << endl;
+            cout << "Перехожу в другую таблицу " << endl;
+
+            crossJoin(baseName, outputCol, nowTable, output, tempStr);
+            clearTemp(tempStr); // убераем послденее добавленное значение
+
+        }else{// в случае рассмотрения последней таблицы
+            cout << "В последней таблице " << endl;
+            string result = tempStr + " " + value;
+            cout << "Записываю в output: " << result << endl;
         }
     }
-    tempStr = "";
+
+    /*
+    while (getline(tempFile, value)){
+        cout << tableName << " " << nowTable << endl;
+        if (nowTable != outputCol.sizeM() - 1){ // если рассматривается не последняя таблица
+        
+            crossJoin(baseName, outputCol, nowTable, output, tempStr);
+
+        }else{ // в случае рассмотрения последней таблицы
+            output += tempStr + value + "\n";
+        }
+    }*/
 }
 
 //SELECT engineer.modelWork, passengers.modelAirplane, airplane.model FROM engineer, passengers, airplane
+//SELECT engineer.modelWork, passengers.modelAirplane FROM engineer, passengers
 
 bool checkFrom (StrArray& fromTable, StrArray& outputCol){
     for (size_t i = 0; i < fromTable.sizeM(); i++){
