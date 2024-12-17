@@ -1,5 +1,8 @@
 #include "libs/delete.h"
 
+// DELETE FROM airplane WHERE airplane.model = 'boing_707'
+// DELETE FROM airplane WHERE airplane.model = 'boing_707' OR airplane.model = engineer.name
+
 void delCom(string userCommand, string baseName){
     string tableName, conditions;
     if (!checkSyntax(tableName, conditions, baseName, userCommand, "DEL")){
@@ -19,7 +22,9 @@ void delCom(string userCommand, string baseName){
         condArr.push(temp);
     }
 
-    if (!correctCond(condArr, tableName)){
+    StrArray table;
+    table.push(tableName);
+    if (!correctCond(condArr, table, "DELETE")){
         cerr << "ERROR_12: Unknown condition." << endl;
         return;
     }
@@ -34,8 +39,7 @@ void delCom(string userCommand, string baseName){
     StrArray tokens;
     toTokens(condArr, tokens);
 
-    int turplLim = getTurplLim();
-    int countCsv = 1, countTemp = 1;
+    int turplLim = getTurplLim(), countCsv = 1, countTemp = 1;
     int countAddStr = 0; // кол-во добавленных строк в temp файле
     bool stop = false;
     while (stop != true){
@@ -102,121 +106,6 @@ void delCom(string userCommand, string baseName){
     unlockTable(tablePath, tableName);
 }
 
-bool correctCond(StrArray& condArr, string tableName){
-    int numElem = 0, countTokens = 1, countLogicOp = 0; // елементов просмотренно
-    for (size_t i = 0; i < condArr.sizeM(); i++){
-        string elem = condArr.get(i);
-        string temp; // записываем готовый токен
-        if (numElem > 3){
-            return false;
-        }else if (elem == "="){
-            if (numElem != 1){
-                return false;
-            }else{
-                numElem++;
-            }
-        }else if (numElem == 0){
-            stringstream ss (elem);
-            string inputTabNam;
-            getline(ss, inputTabNam, '.');
-            if (inputTabNam != tableName){
-                return false;
-            }
-
-            string column;
-            getline(ss, column);
-            if (!columnExist(tableName, column)){
-                return false;
-            }
-            numElem++;
-        }else if(numElem == 2){
-            if (elem.size() < 3 || elem[0] != '\'' || elem[elem.size() - 1] != '\''){
-                return false;
-            }else{
-                numElem++;
-            }
-        }else if (elem == "OR" || elem == "AND"){
-            if (numElem != 3){
-                return false;
-            }else{
-                numElem = 0;
-                countTokens++;
-                countLogicOp++;
-            }
-        }else{
-            return false;
-        }
-    }
-
-    if (countLogicOp != countTokens - 1){ // OR или AND > либо < токенов
-        return false;
-    }else if (numElem != 3){ // недозаполненные значения
-        return false;
-    }else{
-        return true;
-    }
-}
-
-void toTokens(StrArray& condArr, StrArray& tokens){
-    int countLogicOp = condArr.sizeM() / 4; // количество OR/AND в массиве
-    if (countLogicOp == 0){
-        string token = condArr.get(0) + " " + condArr.get(2);
-        tokens.push(token);
-        return;
-    }
-    int viewLogOp = 0; // сколько из них просмотренно
-    bool wasOr = false, wasAnd = false; // маркеры просмотренных операторов
-    for (size_t i = 3; i < condArr.sizeM(); i += 4){
-        string elem = condArr.get(i);
-        string token = condArr.get(i - 3) + " " + condArr.get(i - 1);
-        string nextToken = condArr.get(i + 1) + " " + condArr.get(i + 3);
-        if (elem == "OR"){
-            viewLogOp++;
-            if (wasAnd == false){
-                tokens.push(token);
-            }else{
-                replaceTok (tokens, token);
-            }
-
-            if (viewLogOp == countLogicOp){
-                tokens.push(nextToken);
-            }
-            wasOr = true;
-            wasAnd = false;
-        }else if (elem == "AND"){
-            viewLogOp++;
-            if (wasOr == true){
-                tokens.push(token);
-            }else{
-                if (tokens.sizeM() == 0){
-                    tokens.push(token);
-                }else{
-                    replaceTok (tokens, token);
-                }
-            }
-
-            if (viewLogOp == countLogicOp){
-                replaceTok (tokens, nextToken);
-            }
-            wasOr = false;
-            wasAnd = true;
-        }
-    }
-}
-
-void replaceTok(StrArray& tokens, string nextToken){
-    string lastTok = tokens.get(tokens.sizeM() - 1);
-    tokens.replace(tokens.sizeM() - 1, lastTok + " " + nextToken);
-}
-
-string withoutApostr (string word){
-    string result;
-    for (size_t i = 1; i < word.size() - 1; i++){
-        result += word[i];
-    }
-    return result;
-}
-
 bool checkVals (string line, string condVal, int valuePos){
     int checkedPos = 0;
     stringstream ss (line);
@@ -234,17 +123,6 @@ bool checkVals (string line, string condVal, int valuePos){
         }
     }
     return false;
-}
-
-bool checkRes (string result){
-    stringstream ss (result);
-    string temp;
-    while (ss >> temp){
-        if (temp == "false"){
-            return false;
-        }
-    }
-    return true;
 }
 
 void addToTemp (string line, string tempPath, string firstLine){
@@ -271,6 +149,7 @@ bool checkCond (StrArray& tokens, string line){
                 countArg ++;
                 getTablCol(temp, table, column); // отдельно название таблицы и стобец
                 valuePos = colIndex(table, column); // позиция значения в строке csv
+
             }else{
                 countArg = 0;
                 condVal = withoutApostr(temp);

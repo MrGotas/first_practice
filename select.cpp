@@ -1,5 +1,10 @@
 #include "libs/select.h"
 
+//SELECT engineer.modelWork, passengers.modelAirplane, airplane.model FROM engineer, passengers, airplane
+//SELECT engineer.modelWork, passengers.modelAirplane FROM engineer, passengers
+//SELECT engineer.modelWork FROM engineer
+//SELECT engineer.modelWork, passengers.modelAirplane FROM engineer, passengers WHERE engineer.modelWork = 'boing_707' OR engineer.modelWork = passengers.modelAirplane
+
 void selectCom (string userCommand, string baseName){
     stringstream ss(userCommand);
     string temp;
@@ -41,28 +46,48 @@ void selectCom (string userCommand, string baseName){
         return;
     }
 
-    //outputCol.print();
-    //fromTable.print();
+    StrArray condArr;
+    if (wasWhere){
+        while (ss >> temp){
+            condArr.push(temp);
+        }
+
+        if (!correctCond(condArr, fromTable, "SELECT")){
+            cerr << "ERROR_16: Unknown condition." << endl;
+            return;
+        }
+    }
 
     if (isLockTables(fromTable, baseName)){ //Проверка блокировки таблицы
         cout << "The table is currently locked for use, try again later." << endl;
         return;
-    }else{
-        lockTables(fromTable, baseName, "1"); // блокируем на время работы
+
+    }else lockTables(fromTable, baseName, "1"); // блокируем на время работы
+
+    StrArray tokens;
+    if (wasWhere){
+        toTokens(condArr, tokens);
     }
 
-    string colNames;
-    createTemp(outputCol, baseName, wasWhere, colNames);
+    StrArray outputTables;
+    massWithoutCol(outputCol, outputTables);
+    //outputCol.print();
+    //outputTables.print();
 
-    massWithoutCol(outputCol);
+    string firstLine = getColFromJson(outputTables);
+    //cout << firstLine << endl;
+    ofstream tempFile(baseName + "/temp.csv");
+    tempFile << firstLine; //заносим названия таблиц.колонок
+    tempFile.close();
 
     int nowTable = 0;
-    string output, tempStr;
-    crossJoin(baseName, outputCol, nowTable, output, tempStr);
-    cout << colNames << endl;
-    //cout << output;
+    string tempStr;
+    crossJoin(baseName, outputTables, nowTable, tempStr);
 
-
+    string result = getResStr(baseName, outputCol, tokens);
+    
+    fs::remove(baseName + "/temp.csv");
+    correctOutput(result, outputCol.sizeM());
 
     lockTables(fromTable, baseName, "0");
 }
@@ -114,150 +139,15 @@ string getValueFromLine(string line, int columnNum){
     return value;
 }
 
-void fromCsvToTemp (string baseName, string tableName, string column, string& colNames){ // функция чтения всех csv одной таблицы
-    string tempPath = baseName + "/" + tableName + "/temp.csv";
-    int columnNum = colIndex(tableName, column);
-    int countCsv = 1;
-    string columnName = " ";
-    while (true){
-        string csvPath = baseName + "/" + tableName + "/" + to_string(countCsv) + ".csv";
-        if (!csvAvail(csvPath)){
-            break;
-        }
-        
-        ifstream csv(csvPath);
-        string line;
-        if (columnName == " "){ // записываем название столбца отдельно
-            getline(csv, line);
-            string value = getValueFromLine(line, columnNum);
-            colNames += value + " ";
-
-            getline(csv, line); // записываем первое значение после названия колонки
-            ofstream tempFile(tempPath, ios::app);
-            value = getValueFromLine(line, columnNum);
-            tempFile << value;
-            columnName = value;
-        }else{
-            getline(csv, line);
-        }
-
-        ofstream tempFile(tempPath, ios::app);
-        while (getline(csv, line)){
-            string value = getValueFromLine(line, columnNum); // получаем значение со строки
-
-            tempFile << endl << value;
-        }
-        
-        csv.close();
-        tempFile.close();
-        countCsv++;
-    }
-}
-
-void createTemp(StrArray& outputCol, string baseName, bool wasWhere, string& colNames){
-    if (wasWhere == false){
-        for (size_t i = 0; i < outputCol.sizeM(); i++){
-            string tableCol = outputCol.get(i);
-
-            string tableName, column;
-            getTablCol(tableCol, tableName, column); // оплучаем отдельно таблицу и колонку
-            
-            fromCsvToTemp(baseName, tableName, column, colNames);
-        }
-
-    }else{
-
-    }
-}
-
-void massWithoutCol (StrArray& outputCol){
+void massWithoutCol (StrArray& outputCol, StrArray& outputTables){
     for (size_t i = 0; i < outputCol.sizeM(); i++){
         string elem = outputCol.get(i);
         stringstream values(elem);
         string tableName;
         getline(values, tableName, '.');
-        outputCol.replace(i, tableName);
+        outputTables.push(tableName);
     }
 }
-
-void clearTemp(string& tempStr){
-    cout << "------------------------------------------------------------------------" << endl;
-    stringstream counter(tempStr);
-    string element;
-    int countWords = 0;
-    while (counter >> element) {
-        countWords++;
-    }
-
-    if (countWords == 1) {
-        tempStr = "";
-        return;
-    }
-
-    stringstream words(tempStr);
-    string word, result;
-    int count = 0;
-    while (words >> word) {
-        if (count == countWords - 1) {
-            break;
-        } else {
-            result += word + " ";
-        }
-        count++;
-    }
-    cout << "Temp = " << tempStr << " result " << result << endl;
-    cout << "---------------------------------------------------------------------------" << endl;
-    tempStr = result;
-}
-
-void crossJoin(string baseName, StrArray& outputCol, int nowTable, string& output, string tempStr){
-    string tableName;
-    for (size_t i = 0; i < outputCol.sizeM(); i++){
-        if (i == nowTable){
-            tableName = outputCol.get(i);
-            nowTable++;
-            break;
-        }
-    }
-    cout << "Таблица " << tableName << " номер " << nowTable << " всего " << outputCol.sizeM() << endl;
-    
-    string tempPath = baseName + "/" + tableName + "/temp.csv";
-    ifstream tempFile(tempPath);
-    string value;
-
-    while (getline(tempFile, value)){
-        if (nowTable != outputCol.sizeM()){ // если рассматривается не последняя таблица
-            tempStr += value + " ";
-
-            cout << "Сейчас в таблице " << tableName << " " << endl;
-            cout << "tempStr = " << tempStr << endl;
-            cout << "Перехожу в другую таблицу " << endl;
-
-            crossJoin(baseName, outputCol, nowTable, output, tempStr);
-            clearTemp(tempStr); // убераем послденее добавленное значение
-
-        }else{// в случае рассмотрения последней таблицы
-            cout << "В последней таблице " << endl;
-            string result = tempStr + " " + value;
-            cout << "Записываю в output: " << result << endl;
-        }
-    }
-
-    /*
-    while (getline(tempFile, value)){
-        cout << tableName << " " << nowTable << endl;
-        if (nowTable != outputCol.sizeM() - 1){ // если рассматривается не последняя таблица
-        
-            crossJoin(baseName, outputCol, nowTable, output, tempStr);
-
-        }else{ // в случае рассмотрения последней таблицы
-            output += tempStr + value + "\n";
-        }
-    }*/
-}
-
-//SELECT engineer.modelWork, passengers.modelAirplane, airplane.model FROM engineer, passengers, airplane
-//SELECT engineer.modelWork, passengers.modelAirplane FROM engineer, passengers
 
 bool checkFrom (StrArray& fromTable, StrArray& outputCol){
     for (size_t i = 0; i < fromTable.sizeM(); i++){
@@ -301,5 +191,289 @@ void removeComma(string& value){
             result += value[i];
         }
         value = result;
+    }
+}
+
+void correctOutput(string result, int wordsPerRow){
+    int columnWidth = 25;
+
+    istringstream stream(result);
+    string word;
+    int count = 0; // Счетчик слов в текущей строке
+
+    while (stream >> word) {
+        cout << word;
+        int spacesToAdd = columnWidth - word.length();
+        for (int i = 0; i < spacesToAdd; ++i) {
+            cout << " ";
+        }
+
+        count++;
+
+        // Переход на новую строку после вывода нужного количества слов
+        if (count == wordsPerRow) {
+            cout << endl;
+            count = 0;
+        }
+    }
+
+    // Если остались слова, завершить строку
+    if (count > 0) {
+        cout << endl;
+    }
+}
+
+string getValues(StrArray& outputCol, string line, string allCol){
+    string result;
+    for (size_t i = 0; i < outputCol.sizeM(); i++){
+        string column = outputCol.get(i);
+
+        int pos = 0;
+        stringstream ss(allCol);
+        string elem;
+        while (getline(ss, elem, ';')){
+            pos++;
+            if (elem == column){
+                break;
+            }
+        }
+
+        stringstream values(line);
+        string value;
+        int valuesPos = 0;
+
+        while (getline(values, value, ';')){
+            valuesPos++;
+            if (valuesPos == pos){
+                result += value + " ";
+                break;
+            }
+        } 
+    }
+    return result;
+}
+
+int getPosVal(string temp, string allCol){
+    int pos = 0;
+    stringstream elems(allCol);
+    string elem;
+
+    while(getline(elems, elem, ';')){
+        pos ++;
+        if (temp == elem){
+            break;
+        }
+    }
+
+    return pos;
+}
+
+bool trueToken(string line, int valPos, string allCol, string temp){
+    if (temp[0] == '\''){ // = 'abs'
+        string condVal = withoutApostr(temp);
+
+        int counter = 0;
+        stringstream elems(line);
+        string elem;
+        while (getline(elems, elem, ';')){
+            counter ++;
+            if (counter == valPos && condVal == elem){
+                return true;
+            }
+        }
+
+    }else{ // = tab1.col2
+        int posRightVal = getPosVal(temp, allCol);
+        int counter = 0;
+        stringstream elems(line);
+        string elem, valLeft, valRight;
+        while (getline(elems, elem, ';')){
+            counter ++;
+            if (counter == valPos){
+                valLeft = elem;
+            }
+            if (counter == posRightVal){
+                valRight = elem;
+            }
+        }
+
+        if (valLeft == valRight){
+            return true;
+        }
+    }
+
+    return false;
+}
+
+//WHERE engineer.modelWork = 'boing_707' OR engineer.modelWork = passengers.modelAirplane
+
+bool conditions(StrArray& tokens, string allCol, string line){
+    for (size_t i = 0; i < tokens.sizeM(); i++){ // проходимся по токенам
+        string token = tokens.get(i);
+        stringstream ss(token);
+        string temp, result = "";
+        int countArg = 0, valPos;
+
+        while (ss >> temp){
+            if (countArg == 0){
+                countArg++;
+                valPos = getPosVal(temp, allCol);
+
+            }else{
+                countArg = 0;
+                if (trueToken(line, valPos, allCol, temp)){
+                   result += " true";
+                }else{
+                    result += " false";
+                }
+            }
+        }
+        
+        if (checkRes(result)){
+            return true;
+        }
+    }
+    return false;
+}
+
+string getResStr(string baseName, StrArray& outputCol, StrArray& tokens){
+    ifstream tempFile(baseName + "/temp.csv");
+    string line, values;
+
+    getline(tempFile, line); // записывем все доступные колонки
+    string allCol = line;
+    values += getValues(outputCol, line, allCol) + '\n';
+
+    while (getline(tempFile, line)){
+        if (tokens.sizeM() == 0){
+            values += getValues(outputCol, line, allCol) + '\n';
+        }else{
+            if (conditions(tokens, allCol, line)){
+                values += getValues(outputCol, line, allCol) + '\n';
+            }
+        }
+    }
+
+    return values;
+}
+
+string getColFromJson(StrArray& outputTables){
+    ifstream file("files/schema.json");
+    json config;
+    file >> config;
+    file.close();
+    string result;
+    for (size_t i = 0; i < outputTables.sizeM(); i++){
+        string table = outputTables.get(i);
+        if (config["structure"].contains(table)) {
+            for (const auto& column : config["structure"][table]) {
+                string colName = column;
+                result += table + "." + colName + ";";
+            }
+        }
+    }
+
+    return result;
+
+}
+
+void withoutTablePk (string& line){
+    stringstream ss(line);
+    string elem, result;
+    int count = 0;
+    while(getline(ss, elem,';')){
+        if (count == 0){
+            count++;
+            continue;
+        }
+        result += elem + ";";
+    }
+
+    line = result;
+}
+
+void addToTemp(string baseName, string tempStr){
+    ofstream tempFile(baseName + "/temp.csv", ios::app);
+    tempFile << endl << tempStr;
+    tempFile.close();
+}
+
+int tempStrSize(string tempStr){
+    stringstream words(tempStr);
+    string word;
+    int counter = 0;
+
+    while (getline(words, word, ';')){
+        counter++;
+    }
+
+    return counter;
+}
+
+void clearTemp(string& tempStr, int wasWords){
+    if (wasWords == 0) {
+        tempStr = "";
+        return;
+    }
+
+    stringstream words(tempStr);
+    string word, result;
+    int count = 0;
+    while (getline(words, word, ';')) {
+        if (count == wasWords) {
+            break;
+        } else {
+            result += word + ";";
+        }
+        count++;
+    }
+
+    tempStr = result;
+}
+
+void crossJoin(string baseName, StrArray& outputTables, int nowTable, string tempStr){
+    //outputTables.print();
+    string tableName;
+    for (size_t i = 0; i < outputTables.sizeM(); i++){
+        if (i == nowTable){
+            tableName = outputTables.get(i);
+            nowTable++;
+            break;
+        }
+    }
+    //cout << tableName << " " << nowTable << endl;
+    string tablePath = baseName + "/" + tableName;
+    int countCsv = 1;
+    while (true){
+        string csvPath = tablePath + "/" + to_string(countCsv) + ".csv";
+
+        if (!csvAvail(csvPath)) break;
+
+        ifstream csv(csvPath);
+        string line;
+
+        getline(csv, line); // пропускаем названия колонок
+        while(getline(csv, line)){
+
+            withoutTablePk (line);
+
+            if (nowTable != outputTables.sizeM()){ // если рассматривается не последняя таблица
+                //cout << "Сейчас в таблице " << tableName << " " << endl;
+                int wasWords = tempStrSize(tempStr);
+                tempStr += line;
+                //cout << "tempStr = " << tempStr << endl;
+                //cout << "Перехожу в другую таблицу " << endl;
+
+                crossJoin(baseName, outputTables, nowTable, tempStr);
+                clearTemp(tempStr, wasWords); // убираем послденее добавленное значение
+
+            }else{// в случае рассмотрения последней таблицы
+                //cout << "В последней таблице " << endl;
+                addToTemp(baseName, tempStr + line);
+                //cout << "Записываю в temp: " << tempStr + line << endl;
+            }
+        }
+
+        countCsv++;
     }
 }

@@ -22,5 +22,13 @@ int getTurplLim ();
 bool csvAvail (string csv);
 void getTablCol (string tablCol, string& table, string& column);
 int colIndex (string table, string column);
+bool checkDot(string elem);
+bool checkSecondElem (string elem, string command);
+bool checkZeroElem (StrArray& tables, string inputTabNam);
+bool correctCond(StrArray& condArr, StrArray& tables, string command);
+void replaceTok(StrArray& tokens, string nextToken);
+void toTokens(StrArray& condArr, StrArray& tokens);
+string withoutApostr (string word);
+bool checkRes (string result);
 
 #endif // INSTRUMENTS
