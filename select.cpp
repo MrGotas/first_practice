@@ -71,11 +71,9 @@ void selectCom (string userCommand, string baseName){
 
     StrArray outputTables;
     massWithoutCol(outputCol, outputTables);
-    //outputCol.print();
-    //outputTables.print();
 
     string firstLine = getColFromJson(outputTables);
-    //cout << firstLine << endl;
+    
     ofstream tempFile(baseName + "/temp.csv");
     tempFile << firstLine; //заносим названия таблиц.колонок
     tempFile.close();
@@ -305,8 +303,6 @@ bool trueToken(string line, int valPos, string allCol, string temp){
     return false;
 }
 
-//WHERE engineer.modelWork = 'boing_707' OR engineer.modelWork = passengers.modelAirplane
-
 bool conditions(StrArray& tokens, string allCol, string line){
     for (size_t i = 0; i < tokens.sizeM(); i++){ // проходимся по токенам
         string token = tokens.get(i);
@@ -432,7 +428,6 @@ void clearTemp(string& tempStr, int wasWords){
 }
 
 void crossJoin(string baseName, StrArray& outputTables, int nowTable, string tempStr){
-    //outputTables.print();
     string tableName;
     for (size_t i = 0; i < outputTables.sizeM(); i++){
         if (i == nowTable){
@@ -441,7 +436,7 @@ void crossJoin(string baseName, StrArray& outputTables, int nowTable, string tem
             break;
         }
     }
-    //cout << tableName << " " << nowTable << endl;
+    
     string tablePath = baseName + "/" + tableName;
     int countCsv = 1;
     while (true){
@@ -458,19 +453,14 @@ void crossJoin(string baseName, StrArray& outputTables, int nowTable, string tem
             withoutTablePk (line);
 
             if (nowTable != outputTables.sizeM()){ // если рассматривается не последняя таблица
-                //cout << "Сейчас в таблице " << tableName << " " << endl;
                 int wasWords = tempStrSize(tempStr);
                 tempStr += line;
-                //cout << "tempStr = " << tempStr << endl;
-                //cout << "Перехожу в другую таблицу " << endl;
 
                 crossJoin(baseName, outputTables, nowTable, tempStr);
                 clearTemp(tempStr, wasWords); // убираем послденее добавленное значение
 
             }else{// в случае рассмотрения последней таблицы
-                //cout << "В последней таблице " << endl;
                 addToTemp(baseName, tempStr + line);
-                //cout << "Записываю в temp: " << tempStr + line << endl;
             }
         }
 
